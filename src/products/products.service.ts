@@ -28,87 +28,85 @@ export class ProductsService {
       return await this.productRepository.save(product);
     }
   
-  
-  async findAll(
-    query: {
-      limit?: number;
-      offset?: number;
-      search?: string;
-      category?: number;
-      minPrice?: number;
-      maxPrice?: number;
-      minRating?: number;
-      maxRating?: number;
-    },
-  ): Promise<{
-    products: ProductList[];
-    totalProducts: number;
-    limit: number;
-  }> {
-    let limit: number;
-
-    if (!query.limit) {
-      limit = 4;
-    } else {
-      limit = query.limit;
+    async findAll(
+      query: {
+        limit?: number;
+        offset?: number;
+        search?: string;
+        category?: number;
+        minPrice?: number;
+        maxPrice?: number;
+        minRating?: number;
+        maxRating?: number;
+      },
+    ): Promise<{
+      products: ProductList[];
+      totalProducts: number;
+      limit: number;
+    }> {
+      let limit: number;
+    
+      if (!query.limit) {
+        limit = 4;
+      } else {
+        limit = query.limit;
+      }
+    
+      const queryBuilder = dataSource
+        .getRepository(ProductEntity)
+        .createQueryBuilder('product')
+        .leftJoinAndSelect('product.category', 'category')
+        .leftJoin('product.reviews', 'review')
+        .addSelect([
+          'COUNT(review.id) AS reviewCount',
+          'AVG(review.ratings)::numeric(10,2) AS avgRating',
+        ])
+        .groupBy('product.id,category.id');
+    
+      if (query.search) {
+        const search = query.search.toLowerCase();
+        queryBuilder.andWhere('LOWER(product.name) LIKE LOWER(:name)', {
+          name: `%${search}%`,
+        });
+      }
+    
+      if (query.category) {
+        queryBuilder.andWhere('category.id=:id', { id: query.category });
+      }
+    
+      if (query.minPrice) {
+        queryBuilder.andWhere('product.price>=:minPrice', {
+          minPrice: query.minPrice,
+        });
+      }
+      if (query.maxPrice) {
+        queryBuilder.andWhere('product.price<=:maxPrice', {
+          maxPrice: query.maxPrice,
+        });
+      }
+    
+      if (query.minRating) {
+        queryBuilder.andHaving('AVG(review.ratings)>=:minRating', {
+          minRating: query.minRating,
+        });
+      }
+    
+      if (query.maxRating) {
+        queryBuilder.andHaving('AVG(review.ratings) <=:maxRating', {
+          maxRating: query.maxRating,
+        });
+      }
+    
+      queryBuilder.limit(limit);
+    
+      if (query.offset) {
+        queryBuilder.offset(query.offset);
+      }
+    
+      const products: ProductList[] = await queryBuilder.getRawMany();
+    
+      return { products, totalProducts: products.length, limit };
     }
-
-    const queryBuilder = dataSource
-      .getRepository(ProductEntity)
-      .createQueryBuilder('product')
-      .leftJoinAndSelect('product.category', 'category')
-      .leftJoin('product.reviews', 'review')
-      .addSelect([
-        'COUNT(review.id) AS reviewCount',
-        'AVG(review.ratings)::numeric(10,2) AS avgRating',
-      ])
-      .groupBy('product.id,category.id');
-
-
-    if (query.search) {
-      const search = query.search;
-      queryBuilder.andWhere('product.name like :name', {
-        name: `%${search}%`,
-      });
-    }
-
-    if (query.category) {
-      queryBuilder.andWhere('category.id=:id', { id: query.category });
-    }
-
-    if (query.minPrice) {
-      queryBuilder.andWhere('product.price>=:minPrice', {
-        minPrice: query.minPrice,
-      });
-    }
-    if (query.maxPrice) {
-      queryBuilder.andWhere('product.price<=:maxPrice', {
-        maxPrice: query.maxPrice,
-      });
-    }
-
-    if (query.minRating) {
-      queryBuilder.andHaving('AVG(review.ratings)>=:minRating', {
-        minRating: query.minRating,
-      });
-    }
-
-    if (query.maxRating) {
-      queryBuilder.andHaving('AVG(review.ratings) <=:maxRating', {
-        maxRating: query.maxRating,
-      });
-    }
-
-    queryBuilder.limit(limit);
-
-    if (query.offset) {
-      queryBuilder.offset(query.offset);
-    }
-
-    const products:ProductList[] = await queryBuilder.getRawMany();
-
-    return { products, totalProducts:products.length, limit };
-  }
 
   async findOne(id: number) {
     const prod = await this.productRepository.findOne({where:{id} ,relations:{addedBy:true,category:true},select:{addedBy:{id:true,name:true,email:true},category:{id:true,title:true}}});
