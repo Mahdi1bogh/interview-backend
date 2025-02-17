@@ -47,7 +47,7 @@ export class ProductsService {
       let limit: number;
     
       if (!query.limit) {
-        limit = 4;
+        limit = 30;
       } else {
         limit = query.limit;
       }
