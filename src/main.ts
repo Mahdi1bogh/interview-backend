@@ -9,7 +9,7 @@ async function bootstrap() {
   // hello world  s
 
   app.enableCors({
-    origin: ['https://interview-test-seven.vercel.app','https://interview-test-1-nlwn.onrender.com' ,'http://localhost:3000'], 
+    origin: ['https://4nestjs.vercel.app','https://interview-test-seven.vercel.app','https://interview-test-1-nlwn.onrender.com' ,'http://localhost:3000'], 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', 
     credentials: true, 
   });
